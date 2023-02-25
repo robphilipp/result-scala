@@ -161,4 +161,18 @@ class ResultTest extends AnyFlatSpec {
   it should "convert a Failure into a Left" in {
     assert(Failure(314).toEither == Left(314))
   }
+
+  "isSuccess" should "be true when the result is a success" in {
+    assert(Success(10).isSuccess)
+  }
+  it should "be false when the result is a failure" in {
+    assert(!Failure(12).isSuccess)
+  }
+
+  "isFailure" should "be true when the result is a failure" in {
+    assert(Failure(10).isFailure)
+  }
+  it should "be false when the result is a success" in {
+    assert(!Success(12).isFailure)
+  }
 }
