@@ -1,4 +1,4 @@
-import com.digitalcipher.result.Result.success
+import com.digitalcipher.result.Success
 //import akka.actor.Status.Failure
 //
 //import scala.util.control
@@ -88,7 +88,7 @@ import com.digitalcipher.result.Result.success
 
 @main def test() =
   println("yay")
-  success(10)
+  Success(10)
 //  success(10).map()
 //  val suc = Success("yay!")
 //  println(suc.map(_.toUpperCase()))
