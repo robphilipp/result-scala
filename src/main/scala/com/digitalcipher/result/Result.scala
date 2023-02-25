@@ -65,7 +65,7 @@ sealed abstract class Result[+S, +F] extends Serializable:
    * @param or The supplier function that returns a [[Result]] when this [[Result]] is a [[Failure]]
    * @tparam F1 The type of the failure value when this is a [[Failure]]
    * @tparam S1 The type of the success value when this is a [[Success]]
-   * @return This [[Result]] when it is a [[Success]]; otherwise the [[Result]] returned 
+   * @return This [[Result]] when it is a [[Success]]; otherwise the [[Result]] returned
    *         from the specified supplier function
    */
   def orElse[F1 >: F, S1 >: S](or: => Result[S1, F1]): Result[S1, F1] = this match
@@ -73,7 +73,7 @@ sealed abstract class Result[+S, +F] extends Serializable:
     case _ => or
 
   /**
-   * 
+   *
    * @param elem
    * @tparam S1
    * @return
@@ -100,17 +100,21 @@ sealed abstract class Result[+S, +F] extends Serializable:
     case Success(success) => Success(f(success))
     case _ => this.asInstanceOf[Result[S1, F]]
 
-  def filterOrElse[F1 >: F](predicate: S => Boolean, zero: => F1): Result[S, F1] = this match
-    case Success(success) if !predicate(success) => Failure(zero)
+  def filterOrElse[F1 >: F](predicate: S => Boolean, defaultValue: => F1): Result[S, F1] = this match
+    case Success(success) if !predicate(success) => Failure(defaultValue)
     case _ => this
 
   def toOption: Option[S] = this match
-    case Success(success) => Some(success)
+    case Success(success) => Some[S](success)
     case _ => None
 
   def toTry(implicit ev: F <:< Throwable): Try[S] = this match
     case Success(success) => scala.util.Success(success)
     case Failure(failure) => scala.util.Failure(failure)
+
+  def toEither: Either[F, S] = this match
+    case Success(success) => Right(success)
+    case Failure(failure) => Left(failure)
 
   def isSuccess: Boolean
   def isFailure: Boolean

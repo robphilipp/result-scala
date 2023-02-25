@@ -120,4 +120,45 @@ class ResultTest extends AnyFlatSpec {
     assert(Success(Failure(Success(10))).flatten == Failure(Success(10)))
     assert(Failure(Failure(10)) == Failure(Failure(10)))
   }
+
+  "map" should "transform the value of success results" in {
+    assert(Success("Yay").map(_.toLowerCase()) == Success("yay"))
+  }
+  it should "not transform the value of failure results" in {
+    assert(Failure[String, String]("oh shit").map(_.toUpperCase()) == Failure("oh shit"))
+  }
+
+  "filterOrElse" should "return a success result if the result is a success and the value meets the predicate" in {
+    assert(Success("this is not a sentence").filterOrElse(_.length > 5, "oops") == Success("this is not a sentence"))
+  }
+  it should "return the default value if the result is a success and the value does not meet the predicate" in {
+    assert(Success("this is not a sentence").filterOrElse(_.length < 5, "oops") == Failure("oops"))
+  }
+  it should "return the un modified failure when the result is a failure" in {
+    assert(
+      Failure[String, String]("son, you're a failure")
+        .filterOrElse(_.length > 10, "nope, wont happen") == Failure("son, you're a failure")
+    )
+  }
+
+  "toOption" should "return a Some when the result is a success" in {
+    assert(Success("am i optional").toOption.map(_ => "no, you are needed").contains("no, you are needed"))
+  }
+  it should "return a None when the result is a failure" in {
+    assert(Failure("am i really a failure").toOption.isEmpty)
+  }
+
+  "toTry" should "convert a Success to a scala.util.Success with the same value" in {
+    assert(Success(10).toTry == scala.util.Success(10))
+  }
+  it should "convert a Failure to a scala.util.Failure with the same value" in {
+    assert(Failure(Throwable("file not found")).toTry == scala.util.Failure(Throwable("file not found")))
+  }
+
+  "toEither" should "convert a Success into a Right" in {
+    assert(Success(10).toEither.contains(10))
+  }
+  it should "convert a Failure into a Left" in {
+    assert(Failure(314).toEither == Left(314))
+  }
 }
