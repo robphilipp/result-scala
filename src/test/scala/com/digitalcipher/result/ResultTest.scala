@@ -53,7 +53,7 @@ class ResultTest extends AnyFlatSpec {
   }
   it should "not perform the side-effect on a Failure" in {
     var test = "yay"
-    Failure[String, String]("boo").foreach(x => test = x.toUpperCase())
+    Failure("boo").withSuccess[String].foreach(x => test = x.toUpperCase())
     assert(test == "yay")
   }
 
@@ -126,6 +126,7 @@ class ResultTest extends AnyFlatSpec {
   }
   it should "not transform the value of failure results" in {
     assert(Failure[String, String]("oh shit").map(_.toUpperCase()) == Failure("oh shit"))
+    assert(Failure[Int, String]("oops").map(_ * 10).getOrElse("bummer") == "bummer")
   }
 
   "filterOrElse" should "return a success result if the result is a success and the value meets the predicate" in {
@@ -152,7 +153,8 @@ class ResultTest extends AnyFlatSpec {
     assert(Success(10).toTry == scala.util.Success(10))
   }
   it should "convert a Failure to a scala.util.Failure with the same value" in {
-    assert(Failure(Throwable("file not found")).toTry == scala.util.Failure(Throwable("file not found")))
+    assert(Failure(Throwable("file not found")).toTry.isFailure)
+    assert(Failure(Throwable("file not found")).toTry.failed.get.getMessage == "file not found")
   }
 
   "toEither" should "convert a Success into a Right" in {

@@ -4,14 +4,10 @@ ThisBuild / scalaVersion := "3.2.1"
 
 lazy val root = (project in file("."))
   .settings(
-    name := "actors"
+    name := "result-scala"
   )
 
-val AkkaVersion = "2.7.0"
 libraryDependencies ++= Seq(
-  "com.typesafe.akka" %% "akka-actor-typed" % AkkaVersion,
-  "com.typesafe.akka" %% "akka-actor-testkit-typed" % AkkaVersion % Test,
-
-  "org.scalactic" %% "scalactic" % "3.2.15",
-  "org.scalatest" %% "scalatest" % "3.2.15" % "test"
+  "org.scalactic" %% "scalactic" % "3.2.15" % Test,
+  "org.scalatest" %% "scalatest" % "3.2.15" % Test
 )
