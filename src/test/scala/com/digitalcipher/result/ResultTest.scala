@@ -8,6 +8,7 @@ class ResultTest extends AnyFlatSpec {
   "equals" should "be true when successes have the same value value" in {
     assert(Success(11) == Success(11))
     assert(Success("a") == Success("a"))
+    assert(Success("a").withFailure[String] == Success("a"))
   }
   it should "be false when successes have different values" in {
     assert(Success("a") != Success("b"))
@@ -34,6 +35,7 @@ class ResultTest extends AnyFlatSpec {
 
   "fold" should "replace the success value with the specified success supplier function" in {
     assert(Success(10).fold(_ => "yay", _ => "boo") == "yay")
+    assert(Success(10).withFailure[String].fold(_ => "yay", _ => "boo") == "yay")
   }
   it should "replace the failure value with the specified failure supplier function" in {
     assert(Success(10).fold(_ => "yay", _ => "boo") == "yay")
@@ -176,5 +178,27 @@ class ResultTest extends AnyFlatSpec {
   }
   it should "be false when the result is a success" in {
     assert(!Success(12).isFailure)
+  }
+
+  "compose" should "add a failure to the existing failure" in {
+    assert(
+      Failure[String, Map[String, String]](Map("error" -> "first message"))
+        .compose(Map("error2" -> "second message"), (m1, m2) => m1 ++ m2)
+        .projection
+        .getOrElse(Map()) == Map("error" -> "first message", "error2" -> "second message")
+    )
+  }
+  it should "add a failure to an existing composable failure with the compose function" in {
+    ComposableFailure[Double]("this is a failure with default error key")
+      .compose(Map("error2" -> "this is the second error"), (m1, m2) => m1 ++ m2)
+      .messages == Map("error" -> "this is a failure with default error key", "error2" -> "this is the second error")
+
+  }
+  "add" should "add a failure to an existing composable failure" in {
+    assert(
+      ComposableFailure[Double]("this is a failure with default error key")
+        .add("error2", "this is the second error")
+        .messages == Map("error" -> "this is a failure with default error key", "error2" -> "this is the second error")
+    )
   }
 }

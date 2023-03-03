@@ -1,5 +1,6 @@
 package com.digitalcipher.result
 
+import scala.annotation.tailrec
 import scala.util.Try
 
 /**
@@ -40,6 +41,8 @@ import scala.util.Try
  * because the "map" function returns the failure, and the "getOrElse" returns
  * the specified default value when the result is a [[Failure]].
  *
+ * This class is based on [[scala.util.Either]].
+ *
  * @tparam S The type of the success value
  * @tparam F The type of the failure value
  *
@@ -69,9 +72,20 @@ sealed abstract class Result[+S, +F] extends Serializable:
   def projection = Result.FailureProjection(this)
 
   /**
-   * Applies the success function `successFn` when this is a success.
-   * When this is a failure, calls the `failureFn`. Both functions
-   * map the value to a combined type, `C`.
+   * Applies the function [[successFn]] to the value when this is a
+   * [[Success]]. Otherwise, applies the [[failureFn]] to the value.
+   * Both the [[successFn]] and the [[failureFn]] must have the same
+   * return type [[C]].
+   *
+   * This function is useful when you want to convert the value of the
+   * [[Result]] to some type regardless of whether the [[Result]] is
+   * a [[Success]] or [[Failure]]. For example, suppose that a function
+   * returns a [[Result]][Int, String] and we want to return "yay" when
+   * the function succeeds and "boo" when it doesn't:
+   * {{{
+   *   someFunctionCall().fold(_ => "yay", _ => "boo")
+   * }}}
+   *
    * @param successFn The function to call when this is a success
    * @param failureFn The function to call when this is failure
    * @tparam C The type of the combined result
@@ -84,7 +98,9 @@ sealed abstract class Result[+S, +F] extends Serializable:
   /**
    * Swaps the a [[Success]] to a [[Failure]] with the same value as
    * the [[Success]], or a [[Failure]] to a [[Success]] with the same
-   * value as the [[Failure]]
+   * value as the [[Failure]]. This function is useful when you expect
+   * something to fail and would like to continue only when it does
+   * fail.
    * @return A [[Result]] whose [[Success]]/[[Failure]] is swapped for
    *         a [[Failure]]/[[Success]]
    */
@@ -190,7 +206,7 @@ final case class Success[+S, +F](value: S) extends Result[S, F]:
   override def isFailure: Boolean = false
 
   /**
-   * Upcasts the `Success[S, F]` to a `Result[S, F1]`
+   * Up-casts the [[Success]] to a [[Result]]
    * {{{
    *   Success("x")                  // Result[String, Nothing]
    *   Success("x").withFailure[Int] // Result[String, Int]
@@ -207,7 +223,7 @@ final case class Success[+S, +F](value: S) extends Result[S, F]:
 
 end Success
 
-final case class Failure[+S, +F](value: F) extends Result[S, F]:
+sealed abstract class BaseFailure[+S, +F] extends Result[S, F]:
   override def isSuccess: Boolean = false
 
   override def isFailure: Boolean = true
@@ -223,7 +239,35 @@ final case class Failure[+S, +F](value: F) extends Result[S, F]:
    * @return
    */
   def withSuccess[S1 >: S]: Result[S1, F] = this
+
+  /**
+   * Allows the composition of [[Failure]]s. For example, when a failure is encountered,
+   * the failure can be added to the existing [[Failure]] to provide a "stack trace".
+   *
+   * @param failure   The [[Failure]] to be added
+   * @param composeFn The function specifying how the [[Failure]] is added
+   * @tparam F1 The type of the new failure value
+   * @return A [[Result]] with the composed failures
+   */
+  def compose[F1 >: F](failure: F1, composeFn: (F, F1) => F1): Result[S, F1]
+end BaseFailure
+
+final case class Failure[+S, +F](value: F) extends BaseFailure[S, F]:
+  override def compose[F1 >: F](failure: F1, composeFn: (F, F1) => F1): Result[S, F1] = Failure(composeFn(value, failure))
 end Failure
+
+final case class ComposableFailure[+S](value: String, key: String = "error", values: Map[String, String] = Map())
+  extends BaseFailure[S, Map[String, String]]:
+
+  private val valueMap: Map[String, String] = if (key.isBlank) values else values ++ Map(key -> value)
+
+  override def compose[F1 >: Map[String, String]](failure: F1, composeFn: (Map[String, String], F1) => F1): ComposableFailure[S] =
+    ComposableFailure("<ignored>", "", valueMap ++ failure.asInstanceOf[Map[String, String]])
+
+  def add(key: String, value: String): ComposableFailure[S] = ComposableFailure(value, key, valueMap)
+
+  def messages: Map[String, String] = valueMap
+end ComposableFailure
 
 object Result:
   final case class FailureProjection[+S, +F](result: Result[S, F]):
@@ -264,4 +308,5 @@ object Result:
     def toOption: Option[F] = result match
       case Failure(failure) => Some(failure)
       case _ => None
+
 end Result
