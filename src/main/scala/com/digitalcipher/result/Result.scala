@@ -94,6 +94,7 @@ sealed abstract class Result[+S, +F] extends Serializable:
   def fold[C](successFn: S => C, failureFn: F => C): C = this match
     case Success(success) => successFn(success)
     case Failure(failure) => failureFn(failure)
+    case _ => throw IllegalStateException(s"Must be either success of failure; ${this.getClass.getCanonicalName}")
 
   /**
    * Swaps the a [[Success]] to a [[Failure]] with the same value as
@@ -107,6 +108,7 @@ sealed abstract class Result[+S, +F] extends Serializable:
   def swap: Result[F, S] = this match
     case Success(success) => Failure(success)
     case Failure(failure) => Success(failure)
+    case _ => throw IllegalStateException(s"Must be either success of failure; ${this.getClass.getCanonicalName}")
 
   /**
    * Function that allows for side effects. For example you can use this
@@ -261,12 +263,31 @@ final case class ComposableFailure[+S](value: String, key: String = "error", val
 
   private val valueMap: Map[String, String] = if (key.isBlank) values else values ++ Map(key -> value)
 
+  /**
+   * @return The error messages as a map(error_id -> error message)
+   */
+  def messages: Map[String, String] = valueMap
+
+  /**
+   * Allows the composition of [[ComposableFailure]]s. For example, when a failure is encountered,
+   * the failure can be added to the existing [[ComposableFailure]] to provide a "stack trace".
+   *
+   * @param failure   The [[ComposableFailure]] to be added
+   * @param composeFn The function specifying how the [[ComposableFailure]] is added
+   * @tparam F1 The type of the new failure value
+   * @return A [[ComposableFailure]] with the composed failures
+   */
   override def compose[F1 >: Map[String, String]](failure: F1, composeFn: (Map[String, String], F1) => F1): ComposableFailure[S] =
     ComposableFailure("<ignored>", "", valueMap ++ failure.asInstanceOf[Map[String, String]])
 
+  /**
+   * A more convenient method for adding error messages. This method only requires that
+   * you add a key and a value.
+   * @param key The error identifier
+   * @param value The error message
+   * @return A [[ComposableFailure]] with the additional error message
+   */
   def add(key: String, value: String): ComposableFailure[S] = ComposableFailure(value, key, valueMap)
-
-  def messages: Map[String, String] = valueMap
 end ComposableFailure
 
 object Result:
