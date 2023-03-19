@@ -69,6 +69,7 @@ sealed abstract class Result[+S, +F] extends Serializable:
    * }}}
    * @return A [[Result.FailureProjection]]
    */
+//  def projection = Result.FailureProjection(this)
   def projection = Result.FailureProjection(this)
 
   /**
@@ -94,7 +95,7 @@ sealed abstract class Result[+S, +F] extends Serializable:
   def fold[C](successFn: S => C, failureFn: F => C): C = this match
     case Success(success) => successFn(success)
     case Failure(failure) => failureFn(failure)
-    case _ => throw IllegalStateException(s"Must be either success of failure; ${this.getClass.getCanonicalName}")
+    case _ => projection.asInstanceOf
 
   /**
    * Swaps the a [[Success]] to a [[Failure]] with the same value as
@@ -108,7 +109,7 @@ sealed abstract class Result[+S, +F] extends Serializable:
   def swap: Result[F, S] = this match
     case Success(success) => Failure(success)
     case Failure(failure) => Success(failure)
-    case _ => throw IllegalStateException(s"Must be either success of failure; ${this.getClass.getCanonicalName}")
+    case _ => projection.asInstanceOf
 
   /**
    * Function that allows for side effects. For example you can use this

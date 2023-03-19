@@ -120,7 +120,7 @@ class ResultTest extends AnyFlatSpec {
   it should "return the outer result on an outer failure" in {
     assert(Failure(Success(10)).flatten == Failure(Success(10)))
     assert(Success(Failure(Success(10))).flatten == Failure(Success(10)))
-    assert(Failure(Failure(10)) == Failure(Failure(10)))
+    assert(Failure(Failure(10)).flatten == Failure(Failure(10)))
   }
 
   "map" should "transform the value of success results" in {
